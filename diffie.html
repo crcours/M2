@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QCM — Échange de clé Diffie-Hellman</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --card: #161f30;
+    --accent: #00e5ff;
+    --accent2: #ff4d6d;
+    --green: #00ff99;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --border: #1e2d45;
+    --correct: #00ff9920;
+    --wrong: #ff4d6d20;
+    --correct-border: #00ff99;
+    --wrong-border: #ff4d6d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px;
+    background-image:
+      radial-gradient(ellipse at 10% 0%, #00e5ff12 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 100%, #ff4d6d10 0%, transparent 50%);
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 12px;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    margin-top: 10px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Progress */
+  .progress-bar-wrap {
+    max-width: 700px;
+    margin: 0 auto 40px;
+    animation: fadeUp 0.7s 0.2s ease both;
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .progress-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* Quiz */
+  .quiz-container {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.5s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .q-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .q-text {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 15px;
+    text-align: left;
+    width: 100%;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-weight: 400;
+  }
+
+  .option:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: #00e5ff08;
+    transform: translateX(4px);
+  }
+
+  .option .opt-letter {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 20px;
+    transition: color 0.2s;
+  }
+
+  .option:hover:not(:disabled) .opt-letter { color: var(--accent); }
+
+  .option.correct {
+    background: var(--correct);
+    border-color: var(--correct-border);
+  }
+
+  .option.correct .opt-letter { color: var(--green); }
+
+  .option.wrong {
+    background: var(--wrong);
+    border-color: var(--wrong-border);
+  }
+
+  .option.wrong .opt-letter { color: var(--accent2); }
+
+  .option:disabled { cursor: default; transform: none; }
+
+  .feedback {
+    display: none;
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Share Tech Mono', monospace;
+    line-height: 1.5;
+  }
+
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: var(--correct); color: var(--green); border: 1px solid var(--correct-border); }
+  .feedback.wrong-fb { background: var(--wrong); color: #ff8fa3; border: 1px solid var(--wrong-border); }
+
+  /* Results */
+  #results {
+    display: none;
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .score-circle {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 32px;
+    position: relative;
+    box-shadow: 0 0 40px #00e5ff30;
+  }
+
+  .score-number {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .score-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .score-msg {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .score-sub {
+    color: var(--muted);
+    font-size: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    margin-bottom: 36px;
+  }
+
+  .btn-restart {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 14px 36px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s;
+  }
+
+  .btn-restart:hover { opacity: 0.85; }
+
+  .breakdown {
+    margin-top: 40px;
+    text-align: left;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .breakdown h3 {
+    font-size: 13px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .bd-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .bd-item:last-child { border-bottom: none; }
+  .bd-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .bd-dot.ok { background: var(--green); }
+  .bd-dot.ko { background: var(--accent2); }
+  .bd-q { flex: 1; color: var(--muted); }
+  .bd-ans { font-family: 'Share Tech Mono', monospace; font-size: 11px; }
+  .bd-ans.ok { color: var(--green); }
+  .bd-ans.ko { color: var(--accent2); }
+
+  @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:none; } }
+  @keyframes fadeUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tag">Cryptographie • Collège</div>
+  <h1>QCM — <span>Diffie-Hellman</span></h1>
+  <p class="subtitle">20 questions · Arithmétique modulaire & échange de clé</p>
+</header>
+
+<div class="progress-bar-wrap">
+  <div class="progress-meta">
+    <span id="prog-label">Question 1 / 20</span>
+    <span id="prog-score">Score : 0</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+</div>
+
+<div class="quiz-container" id="quiz"></div>
+<div id="results">
+  <div class="score-circle">
+    <div class="score-number" id="res-num">—</div>
+    <div class="score-label">/ 20</div>
+  </div>
+  <div class="score-msg" id="res-msg"></div>
+  <div class="score-sub" id="res-sub"></div>
+  <button class="btn-restart" onclick="restart()">↺ Recommencer</button>
+  <div class="breakdown" id="breakdown"></div>
+</div>
+
+<script>
+const questions = [
+  {
+    q: "En quelle année Whitfield Diffie et Martin Hellman ont-ils inventé leur protocole d'échange de clé ?",
+    opts: ["1968", "1976", "1986", "1994"],
+    ans: 1,
+    exp: "L'échange de clé Diffie-Hellman a été inventé en 1976."
+  },
+  {
+    q: "Que signifie l'opération « modulo » (noté %) ?",
+    opts: [
+      "La division entière de a par b",
+      "Le reste de la division euclidienne de a par b",
+      "Le quotient arrondi de a par b",
+      "La multiplication de a et b"
+    ],
+    ans: 1,
+    exp: "Modulo donne le reste de la division euclidienne. Ex : 9 % 2 = 1 car 9 = 2×4 + 1."
+  },
+  {
+    q: "Quel est le résultat de 15 % 7 ?",
+    opts: ["1", "2", "7", "0"],
+    ans: 0,
+    exp: "15 = 2×7 + 1, donc 15 % 7 = 1."
+  },
+  {
+    q: "Quel est le résultat de 10 % 7 ?",
+    opts: ["1", "2", "3", "4"],
+    ans: 2,
+    exp: "10 = 1×7 + 3, donc 10 % 7 = 3."
+  },
+  {
+    q: "Dans l'analogie des peintures utilisée pour expliquer Diffie-Hellman, que représente le mélange des couleurs ?",
+    opts: [
+      "Une opération facile à faire mais difficile à défaire",
+      "Une opération facile à défaire",
+      "La transmission publique d'un message chiffré",
+      "La génération d'une clé publique RSA"
+    ],
+    ans: 0,
+    exp: "Mélanger des peintures est facile, mais séparer les couleurs est quasi impossible — comme l'opération modulaire."
+  },
+  {
+    q: "Dans l'activité simplifiée, Alice choisit la clé privée 11 et Bob choisit 6. La base publique est 3 et le modulo public est 10. Quelle est la clé publique d'Alice (3¹¹ % 10) ?",
+    opts: ["3", "5", "7", "9"],
+    ans: 2,
+    exp: "3¹¹ = 177 147, et 177 147 % 10 = 7."
+  },
+  {
+    q: "Toujours avec base=3, modulo=10 : quelle est la clé publique de Bob (3⁶ % 10) ?",
+    opts: ["7", "9", "3", "1"],
+    ans: 1,
+    exp: "3⁶ = 729, et 729 % 10 = 9."
+  },
+  {
+    q: "À l'étape E, Alice prend la clé publique de Bob (9) et calcule 9¹¹ % 10. Quel est le résultat ?",
+    opts: ["7", "3", "9", "1"],
+    ans: 2,
+    exp: "9¹¹ % 10 = 9. Alice et Bob obtiennent tous les deux 9 comme clé secrète partagée."
+  },
+  {
+    q: "Pourquoi Eve, qui intercepte les nombres 7 et 9, ne peut-elle pas trouver la clé secrète facilement ?",
+    opts: [
+      "Elle ne connaît pas le modulo ni la base",
+      "Retrouver la clé privée depuis la clé publique nécessite un calcul extrêmement long",
+      "Les nombres envoyés sont chiffrés avant transmission",
+      "Eve ne reçoit qu'un seul des deux nombres"
+    ],
+    ans: 1,
+    exp: "L'opération inverse (logarithme discret) a un temps de calcul extrêmement long avec de grands nombres."
+  },
+  {
+    q: "Diffie-Hellman est basé sur des calculs mathématiques impliquant :",
+    opts: [
+      "Des nombres pairs uniquement",
+      "Des matrices carrées",
+      "De grands nombres premiers",
+      "Des suites de Fibonacci"
+    ],
+    ans: 2,
+    exp: "En pratique, Diffie-Hellman repose sur des calculs modulaires avec de très grands nombres premiers."
+  },
+  {
+    q: "Quel est le résultat de 45 % 10 ?",
+    opts: ["4", "5", "0", "9"],
+    ans: 1,
+    exp: "45 = 4×10 + 5, donc 45 % 10 = 5."
+  },
+  {
+    q: "Quel est le résultat de 309 % 3 ?",
+    opts: ["1", "2", "0", "3"],
+    ans: 2,
+    exp: "309 = 103×3 + 0, donc 309 % 3 = 0."
+  },
+  {
+    q: "Quelle est la principale limite de l'échange de clé Diffie-Hellman ?",
+    opts: [
+      "Il ne fonctionne qu'avec des petits nombres",
+      "Il chiffre directement les messages",
+      "Il est vulnérable à l'attaque de l'homme du milieu (man-in-the-middle) si on ne vérifie pas l'identité",
+      "Il nécessite une rencontre physique entre Alice et Bob"
+    ],
+    ans: 2,
+    exp: "Sans vérification d'identité, Eve peut se placer entre Alice et Bob et avoir deux clés secrètes distinctes avec chacun."
+  },
+  {
+    q: "Dans une attaque man-in-the-middle contre Diffie-Hellman, qu'est-ce qu'Eve peut faire ?",
+    opts: [
+      "Lire et modifier les messages sans qu'Alice ni Bob s'en rendent compte",
+      "Uniquement lire les messages, mais pas les modifier",
+      "Bloquer totalement la communication",
+      "Retrouver la clé privée d'Alice uniquement"
+    ],
+    ans: 0,
+    exp: "Eve a une clé avec Alice et une clé avec Bob : elle peut lire, modifier et re-chiffrer tous les messages."
+  },
+  {
+    q: "À quoi sert principalement l'échange de clé Diffie-Hellman ?",
+    opts: [
+      "Chiffrer directement un long message",
+      "Établir une clé secrète partagée pour ensuite chiffrer avec un autre algorithme (ex : AES)",
+      "Signer numériquement un document",
+      "Compresser des données avant envoi"
+    ],
+    ans: 1,
+    exp: "Diffie-Hellman établit la clé, qui est ensuite utilisée par un algorithme de chiffrement symétrique comme AES."
+  },
+  {
+    q: "Quel algorithme de chiffrement est mentionné dans le cours comme exemple d'usage après l'échange de clé Diffie-Hellman ?",
+    opts: ["RSA", "SHA-256", "AES", "MD5"],
+    ans: 2,
+    exp: "Le cours mentionne AES comme exemple d'algorithme pouvant utiliser la clé établie par Diffie-Hellman."
+  },
+  {
+    q: "Le chiffrement RSA est basé sur :",
+    opts: [
+      "L'échange de clé Diffie-Hellman",
+      "L'arithmétique modulaire",
+      "L'analyse de fréquence des lettres",
+      "La compression de Huffman"
+    ],
+    ans: 1,
+    exp: "RSA repose sur l'arithmétique modulaire, notamment la difficulté de factoriser de grands nombres."
+  },
+  {
+    q: "Dans l'historique de la cryptographie, quel était le problème principal du chiffre de Vigenère (clé symétrique, 1586) ?",
+    opts: [
+      "Il fallait 25 essais pour déchiffrer",
+      "L'analyse de fréquence permettait de le casser",
+      "Il fallait transmettre la clé secrètement",
+      "Il ne fonctionnait qu'avec l'alphabet latin"
+    ],
+    ans: 2,
+    exp: "La clé symétrique oblige les deux parties à se partager la clé secrètement au préalable — c'est le problème résolu par Diffie-Hellman."
+  },
+  {
+    q: "Que signifie que Diffie-Hellman utilise un « transport de messages publics » ?",
+    opts: [
+      "Alice et Bob se rencontrent en public pour échanger la clé",
+      "Les messages échangés pour établir la clé peuvent être vus de tous, sans compromettre le secret",
+      "La clé finale est publiée sur internet",
+      "Les messages sont chiffrés avec une clé publique avant envoi"
+    ],
+    ans: 1,
+    exp: "C'est le cœur de l'idée : même si Eve voit tous les échanges, elle ne peut pas retrouver la clé secrète finale."
+  },
+  {
+    q: "Pourquoi les nombres 3 et 10 utilisés dans l'activité simplifiée sont-ils qualifiés de « pas très intéressants » pour le chiffrement ?",
+    opts: [
+      "Ils sont trop grands pour être calculés à la main",
+      "Ils ne sont pas des nombres premiers, ce qui réduit la sécurité",
+      "Ils produisent trop de collisions modulaires",
+      "Ils sont impairs"
+    ],
+    ans: 1,
+    exp: "Pour plus d'efficacité, on préfère des nombres premiers comme base et modulo (ex : 2 et 11). Des nombres comme 10 ont des propriétés modulaires moins favorables à la sécurité."
+  }
+];
+
+let current = 0;
+let score = 0;
+let answered = [];
+let userAnswers = [];
+
+function render() {
+  const quiz = document.getElementById('quiz');
+  quiz.innerHTML = '';
+  const q = questions[current];
+  const card = document.createElement('div');
+  card.className = 'question-card';
+  card.style.animationDelay = '0s';
+
+  card.innerHTML = `
+    <div class="q-number">Question ${current + 1} sur 20</div>
+    <div class="q-text">${q.q}</div>
+    <div class="options" id="opts"></div>
+    <div class="feedback" id="fb"></div>
+  `;
+  quiz.appendChild(card);
+
+  const opts = document.getElementById('opts');
+  const letters = ['A', 'B', 'C', 'D'];
+  q.opts.forEach((o, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span>${o}`;
+    btn.onclick = () => select(i);
+    opts.appendChild(btn);
+  });
+
+  updateProgress();
+}
+
+function select(i) {
+  if (answered[current]) return;
+  answered[current] = true;
+  userAnswers[current] = i;
+
+  const q = questions[current];
+  const btns = document.querySelectorAll('.option');
+  const fb = document.getElementById('fb');
+
+  btns.forEach((b, idx) => {
+    b.disabled = true;
+    if (idx === q.ans) b.classList.add('correct');
+    else if (idx === i && i !== q.ans) b.classList.add('wrong');
+  });
+
+  if (i === q.ans) {
+    score++;
+    fb.className = 'feedback correct-fb show';
+    fb.textContent = '✓ Correct ! ' + q.exp;
+  } else {
+    fb.className = 'feedback wrong-fb show';
+    fb.textContent = '✗ Incorrect. ' + q.exp;
+  }
+
+  updateProgress();
+
+  setTimeout(() => {
+    current++;
+    if (current < questions.length) render();
+    else showResults();
+  }, 2000);
+}
+
+function updateProgress() {
+  const pct = (current / questions.length) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Question ${Math.min(current + 1, 20)} / 20`;
+  document.getElementById('prog-score').textContent = `Score : ${score}`;
+}
+
+function showResults() {
+  document.getElementById('quiz').style.display = 'none';
+  document.querySelector('.progress-bar-wrap').style.display = 'none';
+  const res = document.getElementById('results');
+  res.style.display = 'block';
+
+  document.getElementById('res-num').textContent = score;
+
+  let msg, sub;
+  if (score >= 18) { msg = '🏆 Excellent !'; sub = 'Maîtrise parfaite de Diffie-Hellman.'; }
+  else if (score >= 14) { msg = '👍 Très bien !'; sub = 'Quelques points à revoir.'; }
+  else if (score >= 10) { msg = '📚 Bien !'; sub = 'Relis le cours et les vidéos.'; }
+  else { msg = '💡 À retravailler'; sub = 'Reprends les slides et les exemples.'; }
+
+  document.getElementById('res-msg').textContent = msg;
+  document.getElementById('res-sub').textContent = sub;
+
+  const bd = document.getElementById('breakdown');
+  let html = '<h3>Détail des réponses</h3>';
+  questions.forEach((q, i) => {
+    const ok = userAnswers[i] === q.ans;
+    const letters = ['A','B','C','D'];
+    html += `<div class="bd-item">
+      <div class="bd-dot ${ok ? 'ok' : 'ko'}"></div>
+      <div class="bd-q">Q${i+1}. ${q.q.substring(0, 55)}…</div>
+      <div class="bd-ans ${ok ? 'ok' : 'ko'}">${ok ? '✓ ' : '✗ '}${letters[q.ans]}</div>
+    </div>`;
+  });
+  bd.innerHTML = html;
+}
+
+function restart() {
+  current = 0; score = 0; answered = []; userAnswers = [];
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz').style.display = 'block';
+  document.querySelector('.progress-bar-wrap').style.display = 'block';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
